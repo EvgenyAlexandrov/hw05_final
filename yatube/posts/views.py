@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404, render
 from django.core.paginator import Paginator
-from .models import Group, Post, User
+from .models import Follow, Group, Post, User, Follow
 from .forms import PostForm, CommentForm
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
@@ -40,9 +40,13 @@ def profile(request, username):
     paginator = Paginator(post_list, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    following = request.user.is_authenticated
+    if following:
+        following = author.following.filter(user=request.user).exists()
     context = {
         'author': author,
         'page_obj': page_obj,
+        'following': following,
     }
     return render(request, 'posts/profile.html', context)
 
@@ -101,7 +105,7 @@ def add_comment(request, post_id):
 
 @login_required
 def follow_index(request):
-    post_list = Post.objects.all()
+    post_list = Post.objects.filter(author__following__user=request.user)
     paginator = Paginator(post_list, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -116,12 +120,21 @@ def follow_index(request):
 
 @login_required
 def profile_follow(request, username):
-    # Я пока отправлю на проверку все остальное, что бы время не терять
-    # Надеюсь вы не против :)
-    ...
+    following = get_object_or_404(User, username=username)
+    if following != request.user:
+        Follow.objects.get_or_create(
+            user=request.user,
+            author=following
+        )
+    return redirect('posts:profile', following)
 
 
 @login_required
 def profile_unfollow(request, username):
-    # Дизлайк, отписка
-    ...
+    follower = get_object_or_404(
+        Follow,
+        user=request.user,
+        author__username=username
+    )
+    follower.delete()
+    return redirect('posts:profile', username)
