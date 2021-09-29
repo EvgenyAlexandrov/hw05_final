@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load thumbnail %}
+
+{% block title %}
+  {{ title }}
+{% endblock %}
+
+{% block content %}
+{% load cache %}
+  {% cache 20 index_page page_obj%}
+  <div class="container py-5">
+  <h1>{{ title }}</h1>
+  {% include 'posts/includes/switcher.html' %}
+  {% for post in page_obj %}
+      <article>
+      {% include 'posts/includes/post_list.html' %}
+        {% if post.group %}
+          <a href="{% url 'posts:list_group' post.group.slug %}">все записи группы</a>
+        {% endif %}
+      </article>
+      {% if not forloop.last %}<hr>{% endif %}
+  {% endfor %}
+  {% include 'posts/includes/paginator.html' %}
+{% endcache %}
+{% endblock %}
