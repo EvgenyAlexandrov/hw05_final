@@ -92,6 +92,7 @@ class PostCreateFormTests(TestCase):
             id=self.post.id).last().text, form_data['text'])
 
     def test_add_comment(self):
+        comment_count = Comment.objects.count()
         form_data = {'text': 'Новый коммент'}
         response = self.authorized_client.post(
             reverse('posts:add_comment', args=[
@@ -101,5 +102,7 @@ class PostCreateFormTests(TestCase):
         )
         self.assertRedirects(response, reverse(
             'posts:post_detail', args=[self.post.id]))
-        self.assertEqual(Comment.objects.filter(
-            id=self.post.id).last().text, form_data['text'])
+        self.assertEqual(Comment.objects.count(), comment_count + 1)
+        last_comment = Comment.objects.first()
+        self.assertEqual(last_comment.text, form_data['text'])
+        self.assertEqual(last_comment.author, self.user)

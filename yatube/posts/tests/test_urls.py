@@ -49,7 +49,8 @@ class StaticURLTests(TestCase):
         """Страница по адресу /create/ перенаправит анонимного
         пользователя на страницу логина.
         """
-        response = self.client.get('/create/', follow=True)
+        adress = reverse('posts:post_create')
+        response = self.client.get(adress)
         self.assertRedirects(
             response, ('/auth/login/?next=/create/'))
 
@@ -57,9 +58,8 @@ class StaticURLTests(TestCase):
         """Страница по адресу posts/<int:post_id>/edit/ перенаправит не автора
         на страницу с постом.
         """
-        response = self.authorized_client.get(
-            f'/posts/{self.post.id}/edit/', follow=True
-        )
+        adress = reverse('posts:post_edit', args=[self.post.id])
+        response = self.authorized_client.get(adress)
         self.assertRedirects(
             response, (f'/posts/{self.post.id}/'))
 
@@ -67,8 +67,7 @@ class StaticURLTests(TestCase):
         """Страница по адресу /posts/<int:post_id>/comment перенаправит анонимного
         пользователя на страницу логина.
         """
-        response = self.client.get(
-            f'/posts/{self.post.id}/comment', follow=True
-        )
+        adress = reverse('posts:add_comment', args=[self.post.id])
+        response = self.client.get(adress)
         self.assertRedirects(
             response, (f'/auth/login/?next=/posts/{self.post.id}/comment'))

@@ -110,7 +110,6 @@ class PostPagesTests(TestCase):
 
     def test_post_detail_pages_show_correct_context(self):
         """Шаблон post_detail сформирован с правильным контекстом."""
-        cache.clear()
         response = (self.authorized_client.
                     get(reverse('posts:post_detail',
                         args=[self.post.id])))
@@ -119,7 +118,6 @@ class PostPagesTests(TestCase):
 
     def test_create_post_pages_show_correct_context(self):
         """Шаблон post_create сформирован с правильным контекстом."""
-        cache.clear()
         response = self.authorized_client.get(reverse('posts:post_create'))
         form_fields = {
             'text': forms.fields.CharField,
@@ -133,7 +131,6 @@ class PostPagesTests(TestCase):
 
     def test_post_edit_pages_show_correct_context(self):
         """Шаблон post_edit сформирован с правильным контекстом."""
-        cache.clear()
         response = (self.author.get(reverse('posts:post_edit',
                                             args=[self.post.id])))
         form_fields = {

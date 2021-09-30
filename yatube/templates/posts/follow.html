@@ -7,7 +7,7 @@
 
 {% block content %}
 {% load cache %}
-  {% cache 20 index_page page_obj%}
+  {% cache 20 index_page%}
   <div class="container py-5">
   <h1>{{ title }}</h1>
   {% include 'posts/includes/switcher.html' %}
