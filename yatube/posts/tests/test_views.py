@@ -89,6 +89,7 @@ class PostPagesTests(TestCase):
         self.assertTrue(
             test_post.image.name.endswith(self.uploaded.name)
         )
+        self.assertNotEqual(test_post.group, self.second_group)
 
     def test_index_pages_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
@@ -103,12 +104,6 @@ class PostPagesTests(TestCase):
         context_group = response.context['group']
         self.assertEqual(context_group, self.group)
 
-    def test_post_not_in_someone_else_is_group(self):
-        """Пост не в чужой группе."""
-        response = self.authorized_client.get(reverse('posts:list_group',
-                                              args=[self.group.slug]))
-        context_group = response.context['group']
-        self.assertNotEqual(context_group, self.second_group)
 
     def test_profile_pages_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
