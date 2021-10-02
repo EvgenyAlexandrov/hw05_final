@@ -50,6 +50,12 @@ class PostPagesTests(TestCase):
             title='Вторая тестовая группа',
             description='Второе тестовое описание'
         )
+        cls.second_post = Post.objects.create(
+            author=cls.user,
+            text='Тестовый текст второй',
+            group=cls.second_group,
+            image=cls.uploaded,
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -89,13 +95,18 @@ class PostPagesTests(TestCase):
         self.assertTrue(
             test_post.image.name.endswith(self.uploaded.name)
         )
-        self.assertNotEqual(test_post.group, self.second_group)
 
     def test_index_pages_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:index'))
         context_page = response.context['page_obj'][0]
         self.post_context(context_page)
+
+    def test_post_does_not_belong_to_the_group(self):
+        """Пост не в другой группе."""
+        response = self.authorized_client.get(reverse('posts:index'))
+        context_page = response.context['page_obj'][1]
+        self.assertNotEqual(context_page.group, self.second_group)
 
     def test_list_group_pages_show_correct_context(self):
         """Шаблон list_group сформирован с правильным контекстом."""
@@ -108,7 +119,7 @@ class PostPagesTests(TestCase):
         """Шаблон profile сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:profile',
                                               args=[self.user.username]))
-        context_page = response.context['page_obj'][0]
+        context_page = response.context['page_obj'][1]
         self.post_context(context_page)
         context_group = response.context['author']
         self.assertEqual(context_group, self.user)
