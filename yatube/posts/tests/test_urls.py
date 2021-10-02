@@ -47,12 +47,12 @@ class StaticURLTests(TestCase):
 
     def test_create_url_redirect_anonymous_on_admin_login(self):
         """Страница по адресу /create/ перенаправит анонимного
-        пользователя на страницу логина.
+        пользователя на страницу регистрации.
         """
         adress = reverse('posts:post_create')
         response = self.client.get(adress)
         self.assertRedirects(
-            response, ('/auth/login/?next=/create/'))
+            response, reverse('users:singup'))
 
     def test_create_url_redirect_anonymous_on_admin_login(self):
         """Страница по адресу posts/<int:post_id>/edit/ перенаправит не автора
@@ -61,7 +61,7 @@ class StaticURLTests(TestCase):
         adress = reverse('posts:post_edit', args=[self.post.id])
         response = self.authorized_client.get(adress)
         self.assertRedirects(
-            response, (f'/posts/{self.post.id}/'))
+            response, reverse('posts:post_detail', args=[self.post.id]))
 
     def test_comment_url_redirect_anonymous_on_admin_login(self):
         """Страница по адресу /posts/<int:post_id>/comment перенаправит анонимного
@@ -69,5 +69,4 @@ class StaticURLTests(TestCase):
         """
         adress = reverse('posts:add_comment', args=[self.post.id])
         response = self.client.get(adress)
-        self.assertRedirects(
-            response, (f'/auth/login/?next=/posts/{self.post.id}/comment'))
+        self.assertEqual(response.status_code, 302)

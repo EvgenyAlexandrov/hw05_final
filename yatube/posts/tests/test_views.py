@@ -45,6 +45,11 @@ class PostPagesTests(TestCase):
             group=cls.group,
             image=cls.uploaded,
         )
+        cls.second_group = Group.objects.create(
+            slug='test-slug-two',
+            title='Вторая тестовая группа',
+            description='Второе тестовое описание'
+        )
 
     @classmethod
     def tearDownClass(cls):
@@ -52,6 +57,7 @@ class PostPagesTests(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
+        self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
         self.user_author = PostPagesTests.post.author
@@ -94,10 +100,15 @@ class PostPagesTests(TestCase):
         """Шаблон list_group сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:list_group',
                                               args=[self.group.slug]))
-        context_page = response.context['page_obj'][0]
-        self.post_context(context_page)
         context_group = response.context['group']
         self.assertEqual(context_group, self.group)
+
+    def test_post_not_in_someone_else_is_group(self):
+        """Пост не в чужой группе."""
+        response = self.authorized_client.get(reverse('posts:list_group',
+                                              args=[self.group.slug]))
+        context_group = response.context['group']
+        self.assertNotEqual(context_group, self.second_group)
 
     def test_profile_pages_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
@@ -145,23 +156,19 @@ class PostPagesTests(TestCase):
 
     def test_cache(self):
         """Список записей хранится в кеше и обновлятся."""
-        post_data = {
-            'text': 'Новый текст',
-            'group': self.group.id,
-        }
-        response = self.authorized_client.post(
-            reverse('posts:index'),
-            data=post_data,
-            follow=True
+        post = Post.objects.create(
+            author=self.user,
+            text='Новый текст',
+            group=self.group
         )
-        post = Post.objects.all()
+        response = self.guest_client.get(reverse('posts:index'))
         content = response.content
         post.delete()
-        response = self.authorized_client.get(reverse('posts:index'))
+        response = self.guest_client.get(reverse('posts:index'))
         content_cached = response.content
         self.assertEqual(content, content_cached)
         cache.clear()
-        response = self.authorized_client.get(reverse('posts:index'))
+        response = self.guest_client.get(reverse('posts:index'))
         content = response.content
         self.assertNotEqual(content, content_cached)
 
