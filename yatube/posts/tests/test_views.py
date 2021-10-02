@@ -104,7 +104,6 @@ class PostPagesTests(TestCase):
         context_group = response.context['group']
         self.assertEqual(context_group, self.group)
 
-
     def test_profile_pages_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:profile',
