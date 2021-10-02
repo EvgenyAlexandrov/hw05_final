@@ -99,7 +99,7 @@ class PostPagesTests(TestCase):
     def test_index_pages_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:index'))
-        context_page = response.context['page_obj'][0]
+        context_page = response.context['page_obj'][1]
         self.post_context(context_page)
 
     def test_post_does_not_belong_to_the_group(self):
