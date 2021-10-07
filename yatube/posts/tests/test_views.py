@@ -8,7 +8,7 @@ from django import forms
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.cache import cache
 
-from posts.models import Post, Group
+from posts.models import Post, Group, Follow
 
 User = get_user_model()
 
@@ -43,17 +43,6 @@ class PostPagesTests(TestCase):
             author=cls.user,
             text='Тестовый текст',
             group=cls.group,
-            image=cls.uploaded,
-        )
-        cls.second_group = Group.objects.create(
-            slug='test-slug-two',
-            title='Вторая тестовая группа',
-            description='Второе тестовое описание'
-        )
-        cls.second_post = Post.objects.create(
-            author=cls.user,
-            text='Тестовый текст второй',
-            group=cls.second_group,
             image=cls.uploaded,
         )
 
@@ -99,30 +88,33 @@ class PostPagesTests(TestCase):
     def test_index_pages_show_correct_context(self):
         """Шаблон index сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:index'))
-        context_page = response.context['page_obj'][1]
+        context_page = response.context['page_obj'][0]
         self.post_context(context_page)
 
-    def test_post_does_not_belong_to_the_group(self):
-        """Пост не в другой группе."""
-        response = self.authorized_client.get(reverse('posts:index'))
-        context_page = response.context['page_obj'][1]
-        self.assertNotEqual(context_page.group, self.second_group)
-
     def test_list_group_pages_show_correct_context(self):
-        """Шаблон list_group сформирован с правильным контекстом."""
+        """
+        В группе нет поста и шаблон list_group
+        сформирован с правильным контекстом.
+        """
+        second_group = Group.objects.create(
+            slug='test-slug-two',
+            title='Вторая тестовая группа',
+            description='Второе тестовое описание'
+        )
         response = self.authorized_client.get(reverse('posts:list_group',
                                               args=[self.group.slug]))
-        context_group = response.context['group']
-        self.assertEqual(context_group, self.group)
+        context_page = response.context['page_obj'][0]
+        self.assertEqual(context_page.group, self.group)
+        self.assertNotEqual(context_page.group, second_group)
 
     def test_profile_pages_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
         response = self.authorized_client.get(reverse('posts:profile',
                                               args=[self.user.username]))
-        context_page = response.context['page_obj'][1]
+        context_page = response.context['page_obj'][0]
         self.post_context(context_page)
-        context_group = response.context['author']
-        self.assertEqual(context_group, self.user)
+        context_author = response.context['author']
+        self.assertEqual(context_author, self.user)
 
     def test_post_detail_pages_show_correct_context(self):
         """Шаблон post_detail сформирован с правильным контекстом."""
@@ -219,3 +211,62 @@ class PaginatorViewsTest(TestCase):
             with self.subTest(reverse_name=reverse_name):
                 response = self.client.get(reverse_name + '?page=2')
                 self.assertEqual(len(response.context['page_obj']), 3)
+
+
+class FollowViewsTest(TestCase):
+
+    def setUp(self):
+        self.follower = User.objects.create_user(username='follower')
+        self.authorized_client = Client()
+        self.authorized_client.force_login(self.follower)
+        self.author = User.objects.create_user(username='author')
+        self.post_author = Post.objects.create(
+            text='Тестовый текст',
+            author=self.author
+        )
+
+    def test_subscription(self):
+        """Тест подписки"""
+        follow_count = Follow.objects.count()
+        response = self.authorized_client.get(
+            reverse('posts:profile_follow', args=[self.author])
+        )
+        self.assertTrue(response)
+        self.assertEqual(Follow.objects.count(), follow_count + 1)
+        last_follow = Follow.objects.first()
+        self.assertEqual(last_follow.author_id, self.author.id)
+        self.assertEqual(last_follow.user_id, self.follower.id)
+        self.assertRedirects(response, reverse(
+            'posts:profile', args=[self.author]))
+
+    def test_unsubscribe(self):
+        """Тест отписки"""
+        follow_count = Follow.objects.count()
+        self.authorized_client.get(
+            reverse('posts:profile_follow', args=[self.author]))
+        response = self.authorized_client.get(
+            reverse('posts:profile_unfollow', args=[self.author]))
+        self.assertEqual(Follow.objects.count(), follow_count)
+        self.assertRedirects(response, reverse(
+            'posts:profile', args=[self.author]))
+
+    def test_presence_of_a_post(self):
+        """Проверка наличия поста"""
+        self.authorized_client.get(
+            reverse('posts:profile_follow', args=[self.author]))
+        response = self.authorized_client.get(
+            reverse('posts:follow_index'))
+        context_page = response.context['page_obj'][0]
+        self.assertEqual(context_page, self.post_author)
+
+    def test_no_post(self):
+        """Проверка отстуствие поста"""
+        new_author = User.objects.create_user(username='new_author')
+        self.authorized_client.force_login(new_author)
+        Post.objects.create(
+            text='Новый тестовый текст',
+            author=new_author,
+        )
+        response = self.authorized_client.get(
+            reverse('posts:follow_index'))
+        self.assertEqual(len(response.context['page_obj']), 0)
