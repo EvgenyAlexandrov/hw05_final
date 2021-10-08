@@ -92,20 +92,24 @@ class PostPagesTests(TestCase):
         self.post_context(context_page)
 
     def test_list_group_pages_show_correct_context(self):
-        """
-        В группе нет поста и шаблон list_group
-        сформирован с правильным контекстом.
-        """
-        second_group = Group.objects.create(
+        """Шаблон list_group сформирован с правильным контекстом."""
+        response = self.authorized_client.get(reverse('posts:list_group',
+                                              args=[self.group.slug]))
+        context_page = response.context['page_obj'][0]
+        self.post_context(context_page)
+        context_group = response.context['group']
+        self.assertEqual(context_group, self.group)
+
+    def test_list_group_pages_show_correct_context(self):
+        """В группе нет поста"""
+        Group.objects.create(
             slug='test-slug-two',
             title='Вторая тестовая группа',
             description='Второе тестовое описание'
         )
         response = self.authorized_client.get(reverse('posts:list_group',
                                               args=[self.group.slug]))
-        context_page = response.context['page_obj'][0]
-        self.assertEqual(context_page.group, self.group)
-        self.assertNotEqual(context_page.group, second_group)
+        self.assertEqual(len(response.context['page_obj']), 1)
 
     def test_profile_pages_show_correct_context(self):
         """Шаблон profile сформирован с правильным контекстом."""
@@ -139,8 +143,8 @@ class PostPagesTests(TestCase):
 
     def test_post_edit_pages_show_correct_context(self):
         """Шаблон post_edit сформирован с правильным контекстом."""
-        response = (self.author.get(reverse('posts:post_edit',
-                                            args=[self.post.id])))
+        response = self.author.get(reverse('posts:post_edit',
+                                           args=[self.post.id]))
         form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField,
@@ -231,11 +235,10 @@ class FollowViewsTest(TestCase):
         response = self.authorized_client.get(
             reverse('posts:profile_follow', args=[self.author])
         )
-        self.assertTrue(response)
         self.assertEqual(Follow.objects.count(), follow_count + 1)
         last_follow = Follow.objects.first()
-        self.assertEqual(last_follow.author_id, self.author.id)
-        self.assertEqual(last_follow.user_id, self.follower.id)
+        self.assertEqual(last_follow.author, self.author)
+        self.assertEqual(last_follow.user, self.follower)
         self.assertRedirects(response, reverse(
             'posts:profile', args=[self.author]))
 
